@@ -1,0 +1,16 @@
+{
+  "name": "playwright-redmine",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "jest": "^26.6.3",
+    "playwright": "^1.10.0"
+  }
+}
