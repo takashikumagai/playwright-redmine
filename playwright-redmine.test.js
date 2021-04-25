@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const redminePlaywright = require('./playwright-redmine');
+const fs = require('fs');
 
 const projectIdentifier = 'playwright_public_project';
 const privateProjectIdentifier = "playwright_private_project";
@@ -96,7 +97,6 @@ beforeAll(async (done) => {
   if(notYetConfigured) {
     await page.click('input[name="commit"][type="submit"]');
   }
-  await page.screenshot({ path: 'screenshots/default-config-loaded.png' });
 
   await redmine.createProject({
     projectName: testProjectIdentifier,
@@ -173,13 +173,15 @@ describe('Test projects', () => {
 
 describe('Test issues', () => {
 
+  let issueId = null;
+  let anotherIssueId = null;
   test('Create issues', async () => {
-    const issueId = await redmine.createIssue(projectIdentifier, {
+    issueId = await redmine.createIssue(testProjectIdentifier, {
       subject: "awww issue",
       description: "This cat is stuck"
     });
     // console.log('Issue created:', issueId);
-    const anotherIssue = await redmine.createIssue(projectIdentifier, {
+    anotherIssueId = await redmine.createIssue(testProjectIdentifier, {
       subject: "another issue",
       description: "This cat is stuck\nThis cat is flonfy"
     });
@@ -190,21 +192,15 @@ describe('Test issues', () => {
     //   `${redmineUrl}/projects/${projectIdentifier}/issues`,
     //   'there-should-be-awww-issue.png');
 
-    expect(getNumIssues()).toBe(2);
-
-    let numIssues = await redmine.getNumIssues(projectIdentifier);
-    console.log(numIssues, 'issues');
+    expect(await redmine.getNumIssues(testProjectIdentifier)).toBe(2);
   });
 
   test('Delete issues', async () => {
     await redmine.deleteIssue(issueId);
-    await redmine.deleteIssue(anotherIssue);
+    await redmine.deleteIssue(anotherIssueId);
 
-    expect(getNumIssues()).toBe(0);
+    expect(await redmine.getNumIssues(testProjectIdentifier)).toBe(0);
   });
-
-  // numIssues = await redmine.getNumIssues(projectIdentifier);
-  // console.log(numIssues, 'issues');
 });
 
 describe('Test trackers', () => {
@@ -374,9 +370,15 @@ describe('Test authentication modes', () => {
 
 describe('test file methods', () => {
 
+  const awwwFile = 'awww.txt';
+  const wonkyFile = 'wonky.txt';
+
+  beforeAll(() => {
+    fs.writeFile(awwwFile, 'awww', err => {if(err) console.error(err);});
+    fs.writeFile(wonkyFile, 'wonky', err => {if(err) console.error(err);});
+  });
+
   test('Add files', async () => {
-    const awwwFile = 'awww.txt';
-    const wonkyFile = 'wonky.txt';
     const files = [
       {
         path: awwwFile,
@@ -427,6 +429,7 @@ describe('test repository methods', () => {
 
     const page = await context.newPage();
     await page.goto(`${redmineUrl}/projects/${testProjectIdentifier}/settings/repositories`);
+    await page.click('#tab-repositories');
     const repo = await page.$(`#tab-content-repositories >> table.list >> tbody >> text="${repoIdentifier}"`);
     expect(repo).not.toBe(null);
   });

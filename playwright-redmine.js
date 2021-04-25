@@ -68,6 +68,8 @@ module.exports = {
     await page.fill('#username', login);
     await page.fill('#password', passwordInPlaintext);
     await page.click('input[type="submit"][name="login"]');
+
+    return page;
   },
 
   signOutFromRedmine: async function() {
@@ -199,7 +201,7 @@ module.exports = {
 
     if(issue.customFields) {
       const cfNames = Object.keys(issue.customFields);
-      console.log('cfNames',cfNames);
+      // console.log('cfNames',cfNames);
       const attribDiv = await page.$('div#attributes');
       for(let cfName of cfNames) {
         // Each custom field looks like this in the DOM:
@@ -209,7 +211,7 @@ module.exports = {
         //   </label>
         //   <input>
         // </p>
-        console.log('cfName',cfName);
+        // console.log('cfName',cfName);
         let span = await attribDiv.$(`span=${cfName}`);
         let label = await span.$('..');
         let p = await label.$('..');
@@ -240,9 +242,13 @@ module.exports = {
     await page.goto(`${this.redmineUrl}/issues/${issueId}`);
 
     page.on('dialog', async (dialog) => {
-      console.debug(dialog.message());
+      // console.debug(dialog.message());
       await dialog.accept();
     });
+
+    if(await this.isRedmineVersionSameWithOrHigherThan('4.2')) {
+      await page.click('span.icon-only.icon-actions');
+    }
 
     await page.click('a.icon.icon-del');
   },
@@ -252,6 +258,12 @@ module.exports = {
     await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/issues`);
 
     const pagination = await page.$('span.pagination');
+
+    if(pagination == null) {
+      // The pagination element does not exist when there is no issue
+      // in the project.
+      return 0;
+    }
   
     // Wait for 5 seconds (safety margin in case the issue list page is not instantly loaded)
     // pagination.waitForExist(5000, false, "waitForExist timed out (getNumIssues)");
@@ -300,7 +312,6 @@ module.exports = {
 
     if(a) {
       page.on('dialog', async (dialog) => {
-        console.debug(dialog.message());
         await dialog.accept();
       });
 
@@ -379,7 +390,7 @@ module.exports = {
     } else if(properties.formatName) {
       await formatSelectElement.selectOption({label: properties.formatName});
     }
-    console.log(`Selected format: ${await page.evaluate(el => el.innerText, await formatSelectElement.$('option[selected="selected"]'))}`);
+    // console.log(`Selected format: ${await page.evaluate(el => el.innerText, await formatSelectElement.$('option[selected="selected"]'))}`);
 
     if(properties.description) {
       await page.fill('#custom_field_description', properties.description);
@@ -523,11 +534,11 @@ module.exports = {
 
       // 'Confirmation' page
       if(await this.isRedmineVersionSameWithOrHigherThan('4.2')) {
-        console.log('Redmine 4.2 or higher');
+        // console.log('Redmine 4.2 or higher');
         // 4.2 or above: redmine requires you to enter the project identifier, like GitHub
         await page.fill('input#confirm', projectIdentifier);
         // Click the 'Delete' button
-        console.log('Deleting',projectIdentifier);
+        // console.log('Deleting',projectIdentifier);
         await page.click('input[type="submit"][name="commit"]');
       } else {
         // 4.1 or earlier: a simple check box
@@ -547,9 +558,18 @@ module.exports = {
 
     const span = await page.$('span.pagination >> span.items');
     const text = await page.evaluate(el => el.innerText, span);
-    console.log('Projects',text);
+    // console.log('Projects',text);
     const numProjects = text.split('/')[1].slice(0,-1);
     return parseInt(numProjects, 10);
+  },
+
+  projectExists: async function(projectIdentifier) {
+    const page = await this.context.newPage();
+    await page.goto(`${this.redmineUrl}/admin/projects`);
+
+    const hrefPrefix = getHrefPrefix(this.redmineUrl);
+    const a = await page.$(`table.list >> tbody >> a[href="${hrefPrefix}/projects/${projectIdentifier}"]`);
+    return (a != null);
   },
 
   /**
@@ -567,7 +587,6 @@ module.exports = {
       // console.log(`Found project ${projectIdentifier}`);
 
       page.on('dialog', async (dialog) => {
-        console.debug(dialog.message());
         await dialog.accept();
       });
 
@@ -713,7 +732,7 @@ module.exports = {
   },
 
   deleteUsersExcept: async function(usersToKeep) {
-    console.log('Error: not implemented');
+    console.error('Error: not implemented');
   },
 
   getIssueStatuses: async function() {
@@ -763,7 +782,7 @@ module.exports = {
 
     const del = await tr.$('a.icon.icon-del');
     await del.click();
-},
+  },
 
   createAuthenticationMode: async function(properties) {
     const page = await this.context.newPage();
@@ -874,7 +893,7 @@ module.exports = {
   },
 
   downloadFile: async function(projectIdentifier, fileName) {
-    console.log('Error: not implemented yet');
+    console.error('Error: not implemented yet');
   },
 
   deleteFile: async function(projectIdentifier, filename) {
@@ -909,12 +928,12 @@ module.exports = {
    */
   createRepository: async function(projectIdentifier, properties) {
     const page = await this.context.newPage();
-    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/repositories/new`);
+    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/repositories/new?repository_scm=${properties.scm}`);
 
-    let scm = await page.$('#repository_scm');
-    await scm.selectOption(properties.scm);
-
-    // await page.waitForSelector('#repository_identifier');
+    // Commented out; this seeminly changes the SCM to Git, but Playwright fails
+    // to fill the rest of the fields (identifier, path, etc.)
+    // let scm = await page.$('#repository_scm');
+    // await scm.selectOption(properties.scm);
 
     if(properties.mainRepository) {
       await page.check('#repository_is_default');
@@ -926,7 +945,7 @@ module.exports = {
       await page.fill('#repository_identifier', properties.repositoryIdentifier);
     }
 
-    if(properties.scm == 'Git') {
+    if(properties.scm === 'Git') {
       await page.fill('#repository_url', properties.pathToRepository);
     } else {
       console.error('playwright-redmine currently only supports Git.');
@@ -937,9 +956,22 @@ module.exports = {
 
   deleteRepository: async function(projectIdentifier, repositoryIdentifier) {
     const page = await this.context.newPage();
-    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/repositories`);
+    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/settings/repositories`);
 
     let tbody = await page.$('table.list >> tbody');
+  },
+
+  /**
+   *
+   * @param {*} projectIdentifier
+   * @param {*} repositoryIdentifier
+   * @returns true if the specified repository exists
+   */
+  repositoryExists: async function(projectIdentifier, repositoryIdentifier) {
+    const page = await this.context.newPage();
+    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/settings/repositories`);
+    let a = await page.$(`table.list >> tbody >> text="${repositoryIdentifier}"`);
+    return (a != null);
   },
 
   createVersion: async function(projectIdentifier, properties) {
