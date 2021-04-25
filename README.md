@@ -10,3 +10,52 @@ playwright-redmine provides methods for the following Redmine features:
 - Create issue custom fields
 - Get the list of installed plugins
 - (plus a few more methods for UI operations)
+
+```js
+(async () => {
+
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+
+  redmine = redminePlaywright.Redmine('http://localhost:3000', context);
+
+  await redmine.signInToRedmine('admin', 'passwordinplaintext');
+
+  // Create an authentication mode
+  await redmine.createAuthenticationMode({
+    name: authenticationModeName,
+    host: "nyanko.io",
+    port: 389,
+    loginAttribute: "awww",
+    baseDn: "awww"
+  });
+
+  // Create a tracker
+  await redmine.createTracker({
+    name: 'Pending Approval',
+    defaultStatus: 'In Progress',
+    description: 'This tracker is chonky'
+    // issuesDisplayedInRoadmap: true,
+  });
+
+  // Add files to a project
+  await redmine.addFiles([
+    {
+      path: 'awww.txt',
+      description: 'Awww text file'
+    },
+    {
+      path: 'purr.png',
+      description: 'Awww image file'
+    }
+  ]);
+
+  // Archive a project
+  const projectIdentifier = 'awww-project';
+  await redmine.archiveProject(projectIdentifier);
+
+  // Unarchive a project
+  await redmine.unarchiveProject(projectIdentifier);
+})();
+
+```
