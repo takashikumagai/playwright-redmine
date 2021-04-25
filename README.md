@@ -12,6 +12,8 @@ playwright-redmine provides methods for the following Redmine features:
 - (plus a few more methods for UI operations)
 
 ```js
+const { chromium } = require('playwright');
+
 (async () => {
 
   const browser = await chromium.launch();
