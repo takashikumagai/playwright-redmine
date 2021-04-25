@@ -56,6 +56,15 @@ playwright-redmine provides methods for the following Redmine features:
 
   // Unarchive a project
   await redmine.unarchiveProject(projectIdentifier);
+
+  // Create a repository
+  await redmine.createRepository(projectIdentifier,{
+    scm: 'Git',
+    mainRepository: true,
+    repositoryIdentifier: 'awww-git-repo',
+    pathToRepository: '/srv/git/awww.git'
+  });
+
 })();
 
 ```
