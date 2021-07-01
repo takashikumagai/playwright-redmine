@@ -72,7 +72,7 @@ async function clean(context, redmineUrl, redmine) {
   // await redmine.deleteUser();
 }
 
-beforeAll(async (done) => {
+beforeAll(async () => {
   browser = await chromium.launch();
   context = await browser.newContext();
 
@@ -105,18 +105,16 @@ beforeAll(async (done) => {
     homepage: 'https://myneighbornyanko.club'
   });
 
-  done();
 }, 5000);
 
-afterAll(async (done) => {
+afterAll(async () => {
   await redmine.deleteProject(testProjectIdentifier);
   await browser.close();
-  done();
 });
 
 describe('Test projects', () => {
 
-  test('Create projects', async (done) => {
+  test('Create projects', async () => {
     const numInitialProjects = await redmine.getNumProjects();
     await redmine.createProject({
       projectName: "Playwright public project",
@@ -144,19 +142,15 @@ describe('Test projects', () => {
     //   context,
     //   `${redmineUrl}/admin/projects`,
     //   'there-should-be-2-test-projects.png');
-
-    done();
   });
 
-  test('Delete projects', async (done) => {
+  test('Delete projects', async () => {
     const numInitialProjects = await redmine.getNumProjects();
     await redmine.deleteProject(projectIdentifier);
     await redmine.deleteProject(privateProjectIdentifier);
 
     let numProjects = await redmine.getNumProjects();
     expect(numProjects).toBe(numInitialProjects - 2);
-
-    done();
   });
 
   // test('Archive and unarchive projects', async () => {
