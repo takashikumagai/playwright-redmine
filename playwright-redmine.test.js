@@ -197,6 +197,29 @@ describe('Test issues', () => {
   });
 });
 
+describe('Test documents', () => {
+
+  test('Create documents', async () => {
+    const documentTitle = 'awww document';
+    const anotherDocumentTitle = 'awww another document';
+    await redmine.createDocument(testProjectIdentifier, {
+      title: documentTitle,
+      description: "This cat is documented."
+    });
+    await redmine.createDocument(testProjectIdentifier, {
+      title: anotherDocumentTitle,
+      description: "This cat is classified."
+    });
+
+    const page = await context.newPage();
+    await page.goto(`${redmineUrl}/projects/${testProjectIdentifier}/documents`);
+    const doc = await page.$(`div#content >> text="${documentTitle}"`);
+    expect(doc).not.toBe(null);
+    const anotherDoc = await page.$(`div#content >> text="${anotherDocumentTitle}"`);
+    expect(anotherDoc).not.toBe(null);
+  });
+});
+
 describe('Test trackers', () => {
 
   test('Create trackers', async () => {

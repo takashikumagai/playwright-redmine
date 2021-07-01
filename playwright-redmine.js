@@ -277,6 +277,21 @@ module.exports = {
     return parseInt(numIssuesStr, 10);
   },
 
+  createDocument: async function(projectIdentifier, properties) {
+    const page = await this.context.newPage();
+    await page.goto(`${this.redmineUrl}/projects/${projectIdentifier}/documents`);
+
+    await page.click('a.icon.icon-add');
+
+    await page.fill('#document_title', properties.title);
+
+    if(properties.description) {
+      await page.fill('#document_description', properties.description);
+    }
+
+    await page.click('input[type="submit"][name="commit"]');
+  },
+
   createTracker: async function(properties) {
     const page = await this.context.newPage();
     await page.goto(`${this.redmineUrl}/trackers`);
